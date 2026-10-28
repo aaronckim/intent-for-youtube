@@ -26,7 +26,12 @@ done
 gh auth status > /dev/null 2>&1 || { print "Run 'gh auth login' first." >&2; exit 1; }
 
 mkdir -p "$BASE" "$LOGS" "$HOME/Library/LaunchAgents"
-[[ -d "$BASE/repo/.git" ]] || git clone -q https://github.com/aaronckim/intent-for-youtube.git "$BASE/repo"
+if [[ -d "$BASE/repo/.git" ]]; then
+  git -C "$BASE/repo" checkout -q main && git -C "$BASE/repo" pull -q --ff-only
+else
+  git clone -q https://github.com/aaronckim/intent-for-youtube.git "$BASE/repo"
+fi
+[[ -f "$BASE/repo/scripts/local-canary.sh" ]] || { print "The clone has no scripts/local-canary.sh; is it merged to main?" >&2; exit 1; }
 
 xml() { print -r -- "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
 

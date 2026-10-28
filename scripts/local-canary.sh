@@ -94,6 +94,6 @@ mkdir -p "$BASE" "$LOGS"
 exec >> "$LOGS/$(date +%F).log" 2>&1
 print "== $(date '+%F %T') start"
 main
-status=$?
-print "== $(date '+%F %T') finished (exit $status)"
-exit $status
+rc=$?
+print "== $(date '+%F %T') finished (exit $rc)"
+exit $rc
