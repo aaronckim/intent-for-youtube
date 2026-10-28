@@ -46,6 +46,11 @@ To test the packaged build, unzip it and run `EXTENSION_DIR=<unzipped folder> np
 
 Users report breakage from **Something broken?** in the popup, which opens the `broken` issue form.
 
+**CI blind spot:** YouTube answers GitHub's cloud machines with a "Sign in to confirm you're not a bot" wall on
+video pages, so in CI the 8 video-page checks (pause screen, sidebar, autoplay) are skipped with a warning. Search
+pages, Shorts, fading and the popup are still checked daily. Run `npm run e2e` on your own machine for full coverage,
+and fix video-page breakage locally.
+
 ### One-time setup
 
 1. **Claude fix agent (Max plan):** install the [Claude GitHub app](https://github.com/apps/claude) on this repo,

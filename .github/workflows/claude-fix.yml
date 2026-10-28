@@ -64,6 +64,9 @@ jobs:
             ${{ github.event.workflow_run.html_url }}
             Tracking issue: #${{ steps.guard.outputs.issue }}
 
+            YouTube shows this runner a "confirm you're not a bot" wall on video pages, so the e2e test
+            skips video-page checks here. Never try to get around that wall.
+
             Read CLAUDE.md first. Then:
             1. Run `npm test && npm run e2e` to reproduce. If it passes on retry and nothing looks wrong
                in the screenshots, it was a flake: comment that on the issue and stop.
