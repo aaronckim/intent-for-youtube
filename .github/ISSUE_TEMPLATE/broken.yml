@@ -1,0 +1,50 @@
+name: Something broken
+description: Something on YouTube isn't hidden, faded, or paused the way it should be.
+title: "Broken: "
+labels: ["broken"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. YouTube changes its pages often, and reports like this are how fixes get found fast.
+        Please don't include anything personal.
+  - type: dropdown
+    id: feature
+    attributes:
+      label: What isn't working?
+      options:
+        - Shorts still showing
+        - Home feed still showing
+        - Sidebar recommendations still showing
+        - End-screen suggestions still showing
+        - Autoplay not turned off
+        - Off-topic videos not fading
+        - On-topic videos fading
+        - Pause screen not appearing
+        - Pause screen on an on-topic video
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: What happened?
+      description: Where on YouTube (search, a video page, home) and what you expected instead. A screenshot helps.
+    validations:
+      required: true
+  - type: dropdown
+    id: signed-in
+    attributes:
+      label: Signed in to YouTube?
+      description: YouTube shows different layouts to signed-in and signed-out viewers.
+      options:
+        - "Yes"
+        - "No"
+  - type: input
+    id: extension-version
+    attributes:
+      label: Extension version
+  - type: input
+    id: chrome-version
+    attributes:
+      label: Chrome version

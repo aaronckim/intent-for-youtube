@@ -36,6 +36,56 @@ To test the packaged build, unzip it and run `EXTENSION_DIR=<unzipped folder> np
 | `extension/popup/` | Toolbar popup: session controls and toggles |
 | `scripts/make-icons.py` | Regenerates `extension/icons/` |
 
+## Automation
+
+| Workflow | When | What |
+|---|---|---|
+| `tests.yml` | every push; daily on `main` | Unit + live-YouTube tests. A failing daily run opens a `canary` issue; a passing one closes it. |
+| `claude-fix.yml` | daily run fails; or a comment mentions `@claude` | Claude Code (on your Claude plan) diagnoses with `npm run inspect`, fixes selectors, and opens a `canary-fix` PR. It never merges. |
+| `release.yml` | tag `vX.Y.Z` matching the manifest | Tests, packages, creates a GitHub release with the zip, submits to the Chrome Web Store. |
+
+Users report breakage from **Something broken?** in the popup, which opens the `broken` issue form.
+
+**CI blind spot:** YouTube answers GitHub's cloud machines with a "Sign in to confirm you're not a bot" wall on
+video pages, so in CI the 8 video-page checks (pause screen, sidebar, autoplay) are skipped with a warning. Search
+pages, Shorts, fading and the popup are still checked daily. The Mac check below covers the rest.
+
+### Full daily check on a Mac
+
+`scripts/local-canary.sh` runs the whole suite from a home connection every day at 09:30 (or on next wake), in its
+own clone of `main` under `~/Library/Application Support/intent-canary/`. On failure it opens or updates a
+`canary-local` issue and shows a notification; on success it closes that issue. It uses no Claude tokens.
+
+```bash
+zsh scripts/install-local-canary.sh                # install (re-run after switching Node versions)
+launchctl kickstart gui/$(id -u)/com.github.aaronckim.intent-canary   # run it now
+zsh scripts/install-local-canary.sh --uninstall    # remove
+```
+
+Logs are in `~/Library/Logs/intent-canary/`. To fix a video-page breakage, open Claude Code in a checkout and run
+`npm run inspect` and `npm run e2e`.
+
+### One-time setup
+
+1. **Claude fix agent (Max plan):** install the [Claude GitHub app](https://github.com/apps/claude) on this repo,
+   then store a subscription token (no API billing):
+   ```bash
+   claude setup-token
+   gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo aaronckim/intent-for-youtube
+   ```
+   (`/install-github-app` inside an interactive `claude` session does both steps.)
+2. **Store submission** (after the first version is uploaded by hand): in Google Cloud, enable the Chrome Web
+   Store API, create a service account with a JSON key, and add its email under **Account** in the Developer
+   Dashboard. Then set `CWS_SERVICE_ACCOUNT_KEY` (the key file), `CWS_PUBLISHER_ID`, and `CWS_EXTENSION_ID`:
+   ```bash
+   gh secret set CWS_SERVICE_ACCOUNT_KEY --repo aaronckim/intent-for-youtube < key.json
+   ```
+   Until these exist, releases still build and attach the zip; store submission is skipped.
+
+### Releasing
+
+Bump `version` in `extension/manifest.json`, merge to `main`, then push a matching tag: `git tag v0.1.1 && git push origin v0.1.1`.
+
 ## Known limits
 
 - YouTube changes its markup often. Selectors were checked against live YouTube on 2026-10-27; `npm run e2e` is the canary.

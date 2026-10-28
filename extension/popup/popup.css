@@ -176,3 +176,11 @@ footer {
   color: var(--muted);
   font-size: 12px;
 }
+
+footer p {
+  margin: 0 0 6px;
+}
+
+footer a {
+  color: var(--accent);
+}

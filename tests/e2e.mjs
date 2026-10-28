@@ -21,6 +21,20 @@ function check(name, ok, detail = '') {
   console.log(`${ok ? '✔' : '✖'} ${name}${detail ? `  (${detail})` : ''}`);
 }
 
+const skipped = [];
+function skip(name, reason) {
+  skipped.push(name);
+  console.log(`- ${name}  (skipped: ${reason})`);
+}
+
+// YouTube sometimes answers cloud machines (like CI runners) with a sign-in wall instead of the video.
+const BOT_CHECK = /confirm you.?re not a bot/i;
+const WATCH_CHECKS = [
+  'friction screen appears on off-topic video', 'video held paused behind the screen',
+  '"Watch anyway" starts disabled', '"Watch anyway" dismisses the screen', 'gate names the newly opened video',
+  'no friction screen on on-topic video', 'sidebar recommendations hidden', 'autoplay turned off',
+];
+
 // Chrome derives an unpacked extension's ID from its absolute path.
 function unpackedExtensionId(dir) {
   const hex = createHash('sha256').update(dir).digest('hex').slice(0, 32);
@@ -48,6 +62,7 @@ const context = await chromium.launchPersistentContext(mkdtempSync(path.join(tmp
   args: [`--disable-extensions-except=${extensionDir}`, `--load-extension=${extensionDir}`],
 });
 
+let yt;
 try {
   const extensionId = unpackedExtensionId(extensionDir);
   const popupUrl = `chrome-extension://${extensionId}/popup/popup.html`;
@@ -58,6 +73,11 @@ try {
   await popup.goto(popupUrl);
   await popup.waitForSelector('#intent-input');
   await popup.screenshot({ path: `${outDir}/01-popup-idle.png`, fullPage: true });
+  const reportHref = await popup.getAttribute('#report-link', 'href');
+  const manifestVersion = await popup.evaluate(() => chrome.runtime.getManifest().version);
+  check('"Something broken?" opens the prefilled issue form',
+    reportHref?.startsWith('https://github.com/aaronckim/intent-for-youtube/issues/new?template=broken.yml')
+      && reportHref.includes(`extension-version=${manifestVersion}`), reportHref);
   await popup.fill('#intent-input', 'React hooks');
   await popup.click('button[type="submit"]');
   await popup.waitForSelector('#session-active:not([hidden])');
@@ -67,7 +87,7 @@ try {
   await popup.screenshot({ path: `${outDir}/02-popup-active.png`, fullPage: true });
 
   // ---- on-topic search ---------------------------------------------------
-  const yt = context.pages()[0];
+  yt = context.pages()[0];
   await yt.bringToFront();
   await search(yt, 'react hooks');
   const htmlClasses = await yt.evaluate(() => document.documentElement.className);
@@ -94,45 +114,53 @@ try {
   check('"show anyway" reveals the card', !(await firstOff.evaluate((c) => c.classList.contains('intent-offtopic'))));
   await (await firstOff.$('a#video-title')).click();
   const gate = yt.locator('.intent-gate');
-  await gate.waitFor({ timeout: 15000 }).catch(() => {});
-  check('friction screen appears on off-topic video', await gate.isVisible());
-  await yt.waitForTimeout(1500);
-  const paused = await yt.evaluate(() => document.querySelector('#movie_player video')?.paused ?? null);
-  check('video held paused behind the screen', paused !== false, `paused=${paused}`);
-  const anyway = gate.locator('.intent-gate__secondary');
-  check('"Watch anyway" starts disabled', await anyway.isDisabled(), await anyway.textContent());
-  await yt.screenshot({ path: `${outDir}/05-friction-screen.png` });
-  await anyway.waitFor({ state: 'visible' });
-  await yt.waitForFunction(() => !document.querySelector('.intent-gate__secondary')?.disabled, null, { timeout: 15000 });
-  await anyway.click();
-  check('"Watch anyway" dismisses the screen', (await gate.count()) === 0);
+  await Promise.race([
+    gate.waitFor({ timeout: 15000 }).catch(() => {}),
+    yt.waitForFunction((re) => new RegExp(re, 'i').test(document.body?.innerText || ''), BOT_CHECK.source, { timeout: 15000 }).catch(() => {}),
+  ]);
+  if (BOT_CHECK.test(await yt.evaluate(() => document.body?.innerText || ''))) {
+    await yt.screenshot({ path: `${outDir}/05-bot-check.png` });
+    for (const name of WATCH_CHECKS) skip(name, 'YouTube showed this machine a bot check instead of the video');
+  } else {
+    check('friction screen appears on off-topic video', await gate.isVisible());
+    await yt.waitForTimeout(1500);
+    const paused = await yt.evaluate(() => document.querySelector('#movie_player video')?.paused ?? null);
+    check('video held paused behind the screen', paused !== false, `paused=${paused}`);
+    const anyway = gate.locator('.intent-gate__secondary');
+    check('"Watch anyway" starts disabled', await anyway.isDisabled(), await anyway.textContent());
+    await yt.screenshot({ path: `${outDir}/05-friction-screen.png` });
+    await anyway.waitFor({ state: 'visible' });
+    await yt.waitForFunction(() => !document.querySelector('.intent-gate__secondary')?.disabled, null, { timeout: 15000 });
+    await anyway.click();
+    check('"Watch anyway" dismisses the screen', (await gate.count()) === 0);
 
-  // ---- video -> video in-page navigation names the new video, not the old one ----
-  await popup.uncheck('[data-setting="hideSidebar"]');
-  await yt.waitForSelector('#related yt-lockup-view-model.intent-offtopic', { timeout: 15000 });
-  const sideCard = await yt.locator('#related yt-lockup-view-model.intent-offtopic').first().elementHandle();
-  const sideTitle = await sideCard.evaluate((c) => c.querySelector('h3[title]')?.getAttribute('title'));
-  await (await sideCard.$('.intent-badge')).click();
-  await (await sideCard.$('a.ytLockupMetadataViewModelTitle')).click();
-  await gate.waitFor({ timeout: 15000 }).catch(() => {});
-  const gateTitle = (await gate.locator('.intent-gate__title').textContent().catch(() => '')) || '';
-  const squash = (s) => (s || '').replace(/\s+/g, ' ').trim();
-  check('gate names the newly opened video', squash(gateTitle) === squash(sideTitle), squash(gateTitle).slice(0, 50));
-  await popup.check('[data-setting="hideSidebar"]');
+    // ---- video -> video in-page navigation names the new video, not the old one ----
+    await popup.uncheck('[data-setting="hideSidebar"]');
+    await yt.waitForSelector('#related yt-lockup-view-model.intent-offtopic', { timeout: 15000 });
+    const sideCard = await yt.locator('#related yt-lockup-view-model.intent-offtopic').first().elementHandle();
+    const sideTitle = await sideCard.evaluate((c) => c.querySelector('h3[title]')?.getAttribute('title'));
+    await (await sideCard.$('.intent-badge')).click();
+    await (await sideCard.$('a.ytLockupMetadataViewModelTitle')).click();
+    await gate.waitFor({ timeout: 15000 }).catch(() => {});
+    const gateTitle = (await gate.locator('.intent-gate__title').textContent().catch(() => '')) || '';
+    const squash = (s) => (s || '').replace(/\s+/g, ' ').trim();
+    check('gate names the newly opened video', squash(gateTitle) === squash(sideTitle), squash(gateTitle).slice(0, 50));
+    await popup.check('[data-setting="hideSidebar"]');
 
-  // ---- on-topic watch page -----------------------------------------------
-  await yt.goto(`https://www.youtube.com${onTopicHref}`, { waitUntil: 'domcontentloaded' });
-  await yt.waitForSelector('ytd-watch-metadata h1', { timeout: 20000 });
-  await yt.waitForTimeout(5000);
-  check('no friction screen on on-topic video', (await yt.locator('.intent-gate').count()) === 0);
-  const relatedDisplay = await yt.evaluate(() => {
-    const el = document.querySelector('ytd-watch-flexy #related');
-    return el ? getComputedStyle(el).display : 'missing';
-  });
-  check('sidebar recommendations hidden', relatedDisplay === 'none' || relatedDisplay === 'missing', relatedDisplay);
-  const autoplay = await yt.evaluate(() => document.querySelector('.ytp-autonav-toggle-button')?.getAttribute('aria-checked'));
-  check('autoplay turned off', autoplay === 'false' || autoplay == null, `aria-checked=${autoplay}`);
-  await yt.screenshot({ path: `${outDir}/06-watch-on-topic.png` });
+    // ---- on-topic watch page -----------------------------------------------
+    await yt.goto(`https://www.youtube.com${onTopicHref}`, { waitUntil: 'domcontentloaded' });
+    await yt.waitForSelector('ytd-watch-metadata h1', { timeout: 20000 });
+    await yt.waitForTimeout(5000);
+    check('no friction screen on on-topic video', (await yt.locator('.intent-gate').count()) === 0);
+    const relatedDisplay = await yt.evaluate(() => {
+      const el = document.querySelector('ytd-watch-flexy #related');
+      return el ? getComputedStyle(el).display : 'missing';
+    });
+    check('sidebar recommendations hidden', relatedDisplay === 'none' || relatedDisplay === 'missing', relatedDisplay);
+    const autoplay = await yt.evaluate(() => document.querySelector('.ytp-autonav-toggle-button')?.getAttribute('aria-checked'));
+    check('autoplay turned off', autoplay === 'false' || autoplay == null, `aria-checked=${autoplay}`);
+    await yt.screenshot({ path: `${outDir}/06-watch-on-topic.png` });
+  }
 
   // ---- Shorts redirect ---------------------------------------------------
   if (shortHref) {
@@ -154,10 +182,15 @@ try {
   await popup.check('[data-setting="hideShorts"]');
 } catch (error) {
   check('run completed without errors', false, error.message.split('\n')[0]);
+  await yt?.screenshot({ path: `${outDir}/failure.png` }).catch(() => {});
 } finally {
   await context.close();
 }
 
 const failed = results.filter((r) => !r.ok).length;
-console.log(`\n${results.length - failed}/${results.length} checks passed. Screenshots: ${outDir}`);
+const skippedNote = skipped.length ? `, ${skipped.length} skipped` : '';
+console.log(`\n${results.length - failed}/${results.length} checks passed${skippedNote}. Screenshots: ${outDir}`);
+if (skipped.length && process.env.GITHUB_ACTIONS) {
+  console.log(`::warning::YouTube showed a bot check, so ${skipped.length} video-page checks were skipped.`);
+}
 process.exit(failed ? 1 : 0);

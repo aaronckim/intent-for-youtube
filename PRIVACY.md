@@ -14,6 +14,9 @@ and makes no network requests of its own.
 - **Video titles and channel names** on YouTube pages are read inside your browser to compare them with
   your topic. This happens in memory, on your device, and is never stored or sent anywhere.
 
+- **"Something broken?"** in the popup opens a GitHub issue form with the extension and Chrome version
+  filled in. Nothing is sent unless you choose to submit that form on GitHub.
+
 ## Permissions
 
 - `storage`: saves the settings and topic described above.
