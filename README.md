@@ -48,8 +48,22 @@ Users report breakage from **Something broken?** in the popup, which opens the `
 
 **CI blind spot:** YouTube answers GitHub's cloud machines with a "Sign in to confirm you're not a bot" wall on
 video pages, so in CI the 8 video-page checks (pause screen, sidebar, autoplay) are skipped with a warning. Search
-pages, Shorts, fading and the popup are still checked daily. Run `npm run e2e` on your own machine for full coverage,
-and fix video-page breakage locally.
+pages, Shorts, fading and the popup are still checked daily. The Mac check below covers the rest.
+
+### Full daily check on a Mac
+
+`scripts/local-canary.sh` runs the whole suite from a home connection every day at 09:30 (or on next wake), in its
+own clone of `main` under `~/Library/Application Support/intent-canary/`. On failure it opens or updates a
+`canary-local` issue and shows a notification; on success it closes that issue. It uses no Claude tokens.
+
+```bash
+zsh scripts/install-local-canary.sh                # install (re-run after switching Node versions)
+launchctl kickstart gui/$(id -u)/com.github.aaronckim.intent-canary   # run it now
+zsh scripts/install-local-canary.sh --uninstall    # remove
+```
+
+Logs are in `~/Library/Logs/intent-canary/`. To fix a video-page breakage, open Claude Code in a checkout and run
+`npm run inspect` and `npm run e2e`.
 
 ### One-time setup
 

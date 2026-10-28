@@ -15,3 +15,5 @@ requests, no new permissions.
 
 CI lives in `.github/workflows/`: `tests.yml` (every push + daily canary), `claude-fix.yml` (fix PRs on
 canary failure, `@claude` mentions), `release.yml` (tag `vX.Y.Z` = manifest version → GitHub release + store).
+CI can't load YouTube video pages (bot wall), so `scripts/local-canary.sh` runs the full suite daily on the owner's
+Mac via launchd and reports through `canary-local` issues.
