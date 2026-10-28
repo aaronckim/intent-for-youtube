@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Intent</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="brand">
+    <img src="../icons/icon32.png" alt="" width="20" height="20">
+    <span>Intent</span>
+  </header>
+
+  <section class="session" id="session-idle">
+    <form id="start-form">
+      <label for="intent-input" class="label">What are you here for?</label>
+      <input id="intent-input" type="text" autocomplete="off" maxlength="80"
+             placeholder="e.g. React hooks, calculus, guitar chords">
+      <details>
+        <summary>Also allow…</summary>
+        <input id="extra-input" type="text" autocomplete="off" maxlength="200"
+               placeholder="Comma-separated, e.g. useEffect, PedroTech">
+      </details>
+      <p class="hint" id="intent-hint" hidden></p>
+      <button type="submit" class="primary">Start focus session</button>
+    </form>
+  </section>
+
+  <section class="session active" id="session-active" hidden>
+    <p class="label">Focused on</p>
+    <p class="intent" id="active-intent"></p>
+    <p class="keywords" id="active-keywords"></p>
+    <p class="since" id="active-since"></p>
+    <button type="button" class="secondary" id="end-button">End session</button>
+  </section>
+
+  <section class="toggles">
+    <h2>Always hide</h2>
+    <label class="toggle"><span>Home feed</span><input type="checkbox" data-setting="hideHomeFeed"></label>
+    <label class="toggle"><span>Shorts</span><input type="checkbox" data-setting="hideShorts"></label>
+    <label class="toggle"><span>Sidebar recommendations</span><input type="checkbox" data-setting="hideSidebar"></label>
+    <label class="toggle"><span>End-screen suggestions</span><input type="checkbox" data-setting="hideEndScreen"></label>
+    <label class="toggle"><span>Autoplay</span><input type="checkbox" data-setting="disableAutoplay"></label>
+
+    <h2>During a session</h2>
+    <label class="toggle"><span>Fade off-topic videos</span><input type="checkbox" data-setting="blurOffTopic"></label>
+    <label class="toggle"><span>Pause before off-topic videos</span><input type="checkbox" data-setting="frictionScreen"></label>
+  </section>
+
+  <footer>Runs entirely in your browser. Nothing you watch leaves this device.</footer>
+
+  <script src="../src/settings.js"></script>
+  <script src="../src/intent.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
