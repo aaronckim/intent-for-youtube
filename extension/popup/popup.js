@@ -11,6 +11,18 @@ function renderSession(session) {
   $('active-since').textContent = `Since ${since}`;
 }
 
+// Opens the repo's "Something broken" issue form with the versions filled in. Nothing is sent
+// unless the user submits the form, and the URL carries no browsing data.
+function reportUrl() {
+  const manifest = chrome.runtime.getManifest();
+  const params = new URLSearchParams({
+    template: 'broken.yml',
+    'extension-version': manifest.version,
+    'chrome-version': navigator.userAgent.match(/Chrome\/([\d.]+)/)?.[1] || 'unknown',
+  });
+  return `${manifest.homepage_url}/issues/new?${params}`;
+}
+
 function showHint(text) {
   $('intent-hint').textContent = text;
   $('intent-hint').hidden = !text;
@@ -18,6 +30,7 @@ function showHint(text) {
 
 async function init() {
   const [settings, session] = await Promise.all([loadSettings(), loadSession()]);
+  $('report-link').href = reportUrl();
 
   for (const box of document.querySelectorAll('[data-setting]')) {
     box.checked = Boolean(settings[box.dataset.setting]);

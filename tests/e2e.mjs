@@ -58,6 +58,11 @@ try {
   await popup.goto(popupUrl);
   await popup.waitForSelector('#intent-input');
   await popup.screenshot({ path: `${outDir}/01-popup-idle.png`, fullPage: true });
+  const reportHref = await popup.getAttribute('#report-link', 'href');
+  const manifestVersion = await popup.evaluate(() => chrome.runtime.getManifest().version);
+  check('"Something broken?" opens the prefilled issue form',
+    reportHref?.startsWith('https://github.com/aaronckim/intent-for-youtube/issues/new?template=broken.yml')
+      && reportHref.includes(`extension-version=${manifestVersion}`), reportHref);
   await popup.fill('#intent-input', 'React hooks');
   await popup.click('button[type="submit"]');
   await popup.waitForSelector('#session-active:not([hidden])');

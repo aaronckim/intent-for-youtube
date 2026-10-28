@@ -1,0 +1,100 @@
+# Claude Code on your Claude subscription (CLAUDE_CODE_OAUTH_TOKEN, from `claude setup-token`).
+#  - canary-fix: when the daily Tests run on main fails, diagnose and open a PR. Never merges.
+#  - mention: comment "@claude ..." on an issue or PR to have it investigate or revise its fix.
+# The action only responds to people with write access to the repo.
+name: Claude fix
+
+on:
+  workflow_run:
+    workflows: ["Tests"]
+    types: [completed]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+  id-token: write
+
+env:
+  CLAUDE_ARGS: >-
+    --max-turns 80
+    --allowedTools "Edit,MultiEdit,Write,Read,Glob,Grep,LS,Bash(git:*),Bash(gh:*),Bash(npm:*),Bash(npx:*),Bash(node:*)"
+
+jobs:
+  canary-fix:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      contains(fromJSON('["schedule", "workflow_dispatch"]'), github.event.workflow_run.event)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Skip if a fix PR is already waiting for review
+        id: guard
+        run: |
+          open=$(gh pr list --label canary-fix --state open --json number --jq length)
+          echo "skip=$([ "$open" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "issue=$(gh issue list --label canary --state open --json number --jq '.[0].number')" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v7
+        if: steps.guard.outputs.skip == 'false'
+        with:
+          node-version: 24
+          cache: npm
+      - if: steps.guard.outputs.skip == 'false'
+        run: npm ci && npx playwright install --with-deps chromium
+      - uses: anthropics/claude-code-action@v1
+        if: steps.guard.outputs.skip == 'false'
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: ${{ env.CLAUDE_ARGS }}
+          prompt: |
+            The daily live-YouTube test for this Chrome extension failed on main:
+            ${{ github.event.workflow_run.html_url }}
+            Tracking issue: #${{ steps.guard.outputs.issue }}
+
+            Read CLAUDE.md first. Then:
+            1. Run `npm test && npm run e2e` to reproduce. If it passes on retry and nothing looks wrong
+               in the screenshots, it was a flake: comment that on the issue and stop.
+            2. Run `npm run inspect` to see YouTube's current markup, and compare it with the selectors
+               in extension/src/content.js and extension/src/content.css.
+            3. Make the smallest fix. Prefer stable hooks (element names, attributes like video-id,
+               URL patterns) over generated class names, and keep the old selector as a fallback when
+               it costs nothing. Keep the extension's promises: no network requests, no new permissions.
+            4. Re-run `npm test && npm run e2e` until it passes.
+            5. Bump the patch version in extension/manifest.json, commit on a new branch named
+               claude/canary-fix-${{ github.run_id }}, push, and open a PR with
+               `gh pr create --label canary-fix` whose body says what YouTube changed, what you changed,
+               and includes "Fixes #${{ steps.guard.outputs.issue }}". Do not merge it.
+            If you can't find a fix, comment your findings on the issue instead.
+
+  mention:
+    if: >-
+      (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
+      contains(github.event.comment.body, '@claude')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci && npx playwright install --with-deps chromium
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: ${{ env.CLAUDE_ARGS }}

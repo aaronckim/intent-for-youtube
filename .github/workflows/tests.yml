@@ -1,0 +1,72 @@
+# Unit tests + the live-YouTube e2e test. Runs on every push, and daily on main as a canary:
+# when YouTube changes its markup, the daily run fails, opens a "canary" issue, and the
+# Claude fix workflow (claude-fix.yml) picks it up.
+name: Tests
+
+on:
+  push:
+  schedule:
+    - cron: "17 13 * * *" # daily, 13:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: screenshots
+          path: test-results/
+          retention-days: 14
+
+  # Daily runs on main only: open or update an issue on failure, close it once green again.
+  canary-report:
+    needs: test
+    if: always() && github.ref == 'refs/heads/main' && github.event_name != 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Open or update the canary issue
+        if: needs.test.result == 'failure'
+        run: |
+          issue=$(gh issue list --label canary --state open --json number --jq '.[0].number')
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --body "Still failing: $RUN_URL"
+          else
+            gh issue create --label canary \
+              --title "Canary: live YouTube test failing" \
+              --body "The daily end-to-end test against live YouTube failed: $RUN_URL
+
+          Screenshots are in the run's **screenshots** artifact. The Claude fix workflow will try to open a PR."
+          fi
+      - name: Close the canary issue
+        if: needs.test.result == 'success'
+        run: |
+          for issue in $(gh issue list --label canary --state open --json number --jq '.[].number'); do
+            gh issue close "$issue" --comment "Passing again: $RUN_URL"
+          done
+      # GitHub disables scheduled workflows in public repos after 60 days without activity.
+      # Re-enabling through the API on each scheduled run is meant to reset that timer.
+      - name: Keep the schedule alive
+        if: github.event_name == 'schedule'
+        run: gh api -X PUT "repos/$GH_REPO/actions/workflows/tests.yml/enable"

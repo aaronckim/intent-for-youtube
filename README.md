@@ -36,6 +36,37 @@ To test the packaged build, unzip it and run `EXTENSION_DIR=<unzipped folder> np
 | `extension/popup/` | Toolbar popup: session controls and toggles |
 | `scripts/make-icons.py` | Regenerates `extension/icons/` |
 
+## Automation
+
+| Workflow | When | What |
+|---|---|---|
+| `tests.yml` | every push; daily on `main` | Unit + live-YouTube tests. A failing daily run opens a `canary` issue; a passing one closes it. |
+| `claude-fix.yml` | daily run fails; or a comment mentions `@claude` | Claude Code (on your Claude plan) diagnoses with `npm run inspect`, fixes selectors, and opens a `canary-fix` PR. It never merges. |
+| `release.yml` | tag `vX.Y.Z` matching the manifest | Tests, packages, creates a GitHub release with the zip, submits to the Chrome Web Store. |
+
+Users report breakage from **Something broken?** in the popup, which opens the `broken` issue form.
+
+### One-time setup
+
+1. **Claude fix agent (Max plan):** install the [Claude GitHub app](https://github.com/apps/claude) on this repo,
+   then store a subscription token (no API billing):
+   ```bash
+   claude setup-token
+   gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo aaronckim/intent-for-youtube
+   ```
+   (`/install-github-app` inside an interactive `claude` session does both steps.)
+2. **Store submission** (after the first version is uploaded by hand): in Google Cloud, enable the Chrome Web
+   Store API, create a service account with a JSON key, and add its email under **Account** in the Developer
+   Dashboard. Then set `CWS_SERVICE_ACCOUNT_KEY` (the key file), `CWS_PUBLISHER_ID`, and `CWS_EXTENSION_ID`:
+   ```bash
+   gh secret set CWS_SERVICE_ACCOUNT_KEY --repo aaronckim/intent-for-youtube < key.json
+   ```
+   Until these exist, releases still build and attach the zip; store submission is skipped.
+
+### Releasing
+
+Bump `version` in `extension/manifest.json`, merge to `main`, then push a matching tag: `git tag v0.1.1 && git push origin v0.1.1`.
+
 ## Known limits
 
 - YouTube changes its markup often. Selectors were checked against live YouTube on 2026-10-27; `npm run e2e` is the canary.
