@@ -86,12 +86,12 @@ const context = await chromium.launchPersistentContext(mkdtempSync(path.join(tmp
 
 try {
   const popup = await context.newPage();
-  await popup.setViewportSize({ width: 320, height: 640 });
+  await popup.setViewportSize({ width: 340, height: 600 }); // Chrome caps popups at 600px tall
   await popup.goto(`chrome-extension://${unpackedExtensionId(extensionDir)}/popup/popup.html`);
   await popup.fill('#intent-input', INTENT);
   await popup.click('button[type="submit"]');
   await popup.waitForSelector('#session-active:not([hidden])');
-  const popupShot = await popup.screenshot({ fullPage: true });
+  const popupShot = await popup.screenshot();
 
   const yt = context.pages()[0];
   await yt.bringToFront();
