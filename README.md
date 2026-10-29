@@ -2,7 +2,9 @@
 
 Use YouTube for what you came for. A Manifest V3 Chrome extension (free tier MVP).
 
-- **Always hide:** home feed, Shorts, sidebar recommendations, end-screen suggestions, autoplay.
+- **On/off switch:** one switch at the top of the popup turns everything off and back on, keeping your choices.
+- **Always hide:** home feed, Shorts, sidebar recommendations, end-screen suggestions, autoplay, and the left
+  menu and top bar either whole or button by button (Home, Shorts, Subscriptions, You, ☰, logo, bell, …).
 - **Focus session:** type what you're here for ("React hooks"). Off-topic videos in search, the
   sidebar, and grids fade out with a "show anyway" button.
 - **Friction screen:** opening an off-topic video pauses it behind a screen that names your intent,
