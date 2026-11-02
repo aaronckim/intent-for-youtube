@@ -29,7 +29,27 @@ function describeCards(tags) {
     'ytd-video-renderer sample': sample('ytd-video-renderer'),
     'yt-lockup-view-model sample': sample('yt-lockup-view-model:not(:has(a[href*="googleadservices"]))'),
     shortsLinks: document.querySelectorAll('a[href^="/shorts/"]').length,
-    guideShorts: document.querySelectorAll('ytd-guide-entry-renderer a[title="Shorts"], ytd-mini-guide-entry-renderer[aria-label="Shorts"]').length,
+  };
+}
+
+// The left menu and top bar, matched in content.css by link (the wide menu's Shorts entry only by title).
+function describeChrome() {
+  const display = (el) => (el ? getComputedStyle(el).display : 'missing');
+  return {
+    'wide menu (#guide)': display(document.querySelector('tp-yt-app-drawer#guide')),
+    'wide menu entries (title -> href)': [...document.querySelectorAll('#guide ytd-guide-entry-renderer a')]
+      .map((a) => `${a.getAttribute('title')} -> ${a.getAttribute('href')}`),
+    'wide menu sections': [...document.querySelectorAll('#guide ytd-guide-section-renderer')]
+      .map((s) => s.querySelector('#guide-section-title')?.textContent.trim() || '(untitled)'),
+    'ytd-guide-renderer > #footer': Boolean(document.querySelector('ytd-guide-renderer > #footer')),
+    'narrow menu entries (href)': [...document.querySelectorAll('ytd-mini-guide-entry-renderer a')].map((a) => a.getAttribute('href')),
+    'ytd-page-manager margin-left': getComputedStyle(document.querySelector('ytd-page-manager')).marginLeft,
+    'top bar': {
+      '#guide-button': document.querySelectorAll('ytd-app #guide-button').length,
+      'ytd-topbar-logo-renderer': document.querySelectorAll('ytd-app ytd-topbar-logo-renderer').length,
+      '#voice-search-button': document.querySelectorAll('ytd-masthead #voice-search-button').length,
+      '#buttons children': [...document.querySelectorAll('ytd-masthead #buttons > *')].map((b) => b.tagName.toLowerCase()),
+    },
   };
 }
 
@@ -39,6 +59,19 @@ const context = await chromium.launchPersistentContext('', {
 const page = context.pages()[0];
 
 try {
+  await page.goto('https://www.youtube.com/', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(5000);
+  console.log('\n== Left menu and top bar (home page, 1400px wide)');
+  console.log(JSON.stringify(await page.evaluate(describeChrome), null, 2));
+  await page.setViewportSize({ width: 1100, height: 900 });
+  await page.waitForTimeout(2000);
+  console.log('\n== Narrow menu (1100px wide)');
+  console.log(JSON.stringify(await page.evaluate(() => ({
+    'narrow menu entries (href)': [...document.querySelectorAll('ytd-mini-guide-entry-renderer a')].map((a) => a.getAttribute('href')),
+    'ytd-page-manager margin-left': getComputedStyle(document.querySelector('ytd-page-manager')).marginLeft,
+  })), null, 2));
+  await page.setViewportSize({ width: 1400, height: 900 });
+
   await page.goto(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(5000);
   console.log(`\n== Search: ${query}`);

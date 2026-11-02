@@ -33,6 +33,9 @@ ALWAYS HIDE (each one optional)
 • Sidebar recommendations
 • End-screen suggestions
 • Autoplay
+• The left menu, whole or button by button: Home, Shorts, Subscriptions, You, History, Explore and more
+• Top-bar buttons: the ☰ menu, the YouTube logo, voice search, Create, notifications
+• One switch turns Intent off and back on without losing your choices
 
 PRIVATE BY DESIGN
 • Runs entirely in your browser. Nothing you watch is sent anywhere: no accounts, no analytics, no tracking.

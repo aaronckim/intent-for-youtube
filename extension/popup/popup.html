@@ -6,46 +6,98 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <header class="brand">
-    <img src="../icons/icon32.png" alt="" width="20" height="20">
-    <span>Intent</span>
+  <header class="topbar">
+    <div class="brand">
+      <img src="../icons/icon32.png" alt="" width="20" height="20">
+      <span>Intent</span>
+    </div>
+    <label class="power">
+      <span id="power-text">On</span>
+      <input type="checkbox" class="switch switch--large" role="switch" data-setting="enabled" aria-label="Intent on or off">
+    </label>
   </header>
 
-  <section class="session" id="session-idle">
-    <form id="start-form">
-      <label for="intent-input" class="label">What are you here for?</label>
-      <input id="intent-input" type="text" autocomplete="off" maxlength="80"
-             placeholder="e.g. React hooks, calculus, guitar chords">
-      <details>
-        <summary>Also allow…</summary>
-        <input id="extra-input" type="text" autocomplete="off" maxlength="200"
-               placeholder="Comma-separated, e.g. useEffect, PedroTech">
+  <p class="paused" id="paused" hidden>Intent is off. YouTube looks and works as usual until you switch it back on.</p>
+
+  <main id="controls">
+    <section class="card" aria-labelledby="focus-title">
+      <h2 class="card-title" id="focus-title">Focus session</h2>
+      <p class="card-sub">Name a topic. Until you end the session, other videos fade out and opening one makes you pause first.</p>
+
+      <div id="session-idle">
+        <form id="start-form">
+          <label for="intent-input" class="label">What are you here for?</label>
+          <input id="intent-input" type="text" autocomplete="off" maxlength="80"
+                 placeholder="e.g. React hooks, calculus, guitar chords">
+          <details class="extra">
+            <summary>Also allow…</summary>
+            <input id="extra-input" type="text" autocomplete="off" maxlength="200"
+                   placeholder="Comma-separated, e.g. useEffect, PedroTech">
+          </details>
+          <p class="hint" id="intent-hint" hidden></p>
+          <button type="submit" class="primary">Start session</button>
+        </form>
+      </div>
+
+      <div id="session-active" hidden>
+        <p class="label label--caps">Focused on</p>
+        <p class="intent" id="active-intent"></p>
+        <p class="keywords" id="active-keywords"></p>
+        <p class="since" id="active-since"></p>
+        <button type="button" class="secondary" id="end-button">End session</button>
+      </div>
+
+      <div class="options">
+        <p class="options-title">During a session</p>
+        <label class="row"><span>Fade off-topic videos</span><input type="checkbox" class="switch" role="switch" data-setting="blurOffTopic"></label>
+        <label class="row"><span>Pause before off-topic videos</span><input type="checkbox" class="switch" role="switch" data-setting="frictionScreen"></label>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="hide-title">
+      <h2 class="card-title" id="hide-title">Always hide</h2>
+      <p class="card-sub">Applies all the time, session or not. Switch something on to hide it.</p>
+
+      <details class="group" open>
+        <summary>Feeds <span class="count"></span></summary>
+        <label class="row"><span>Home feed</span><input type="checkbox" class="switch" role="switch" data-setting="hideHomeFeed"></label>
+        <label class="row"><span>Shorts, everywhere</span><input type="checkbox" class="switch" role="switch" data-setting="hideShorts"></label>
       </details>
-      <p class="hint" id="intent-hint" hidden></p>
-      <button type="submit" class="primary">Start focus session</button>
-    </form>
-  </section>
 
-  <section class="session active" id="session-active" hidden>
-    <p class="label">Focused on</p>
-    <p class="intent" id="active-intent"></p>
-    <p class="keywords" id="active-keywords"></p>
-    <p class="since" id="active-since"></p>
-    <button type="button" class="secondary" id="end-button">End session</button>
-  </section>
+      <details class="group" open>
+        <summary>Video page <span class="count"></span></summary>
+        <label class="row"><span>Suggested videos beside the player</span><input type="checkbox" class="switch" role="switch" data-setting="hideSidebar"></label>
+        <label class="row"><span>End-screen suggestions</span><input type="checkbox" class="switch" role="switch" data-setting="hideEndScreen"></label>
+        <label class="row"><span>Stop autoplay</span><input type="checkbox" class="switch" role="switch" data-setting="disableAutoplay"></label>
+      </details>
 
-  <section class="toggles">
-    <h2>Always hide</h2>
-    <label class="toggle"><span>Home feed</span><input type="checkbox" data-setting="hideHomeFeed"></label>
-    <label class="toggle"><span>Shorts</span><input type="checkbox" data-setting="hideShorts"></label>
-    <label class="toggle"><span>Sidebar recommendations</span><input type="checkbox" data-setting="hideSidebar"></label>
-    <label class="toggle"><span>End-screen suggestions</span><input type="checkbox" data-setting="hideEndScreen"></label>
-    <label class="toggle"><span>Autoplay</span><input type="checkbox" data-setting="disableAutoplay"></label>
+      <details class="group">
+        <summary>Left menu <span class="count"></span></summary>
+        <label class="row row--strong"><span>The whole menu</span><input type="checkbox" class="switch" role="switch" data-setting="hideGuide"></label>
+        <div class="sub" data-under="hideGuide">
+          <p class="group-note">Or just these:</p>
+          <label class="row"><span>Home</span><input type="checkbox" class="switch" role="switch" data-setting="hideGuideHome"></label>
+          <label class="row"><span>Shorts</span><input type="checkbox" class="switch" role="switch" data-setting="hideGuideShorts"></label>
+          <label class="row"><span>Subscriptions</span><input type="checkbox" class="switch" role="switch" data-setting="hideGuideSubscriptions"></label>
+          <label class="row"><span>You</span><input type="checkbox" class="switch" role="switch" data-setting="hideGuideYou"></label>
+          <label class="row"><span>History</span><input type="checkbox" class="switch" role="switch" data-setting="hideGuideHistory"></label>
+          <label class="row"><span>Explore section</span><input type="checkbox" class="switch" role="switch" data-setting="hideGuideExplore"></label>
+          <label class="row"><span>More from YouTube</span><input type="checkbox" class="switch" role="switch" data-setting="hideGuideMoreFromYouTube"></label>
+          <label class="row"><span>Settings and help links</span><input type="checkbox" class="switch" role="switch" data-setting="hideGuideSettings"></label>
+          <label class="row"><span>Footer links</span><input type="checkbox" class="switch" role="switch" data-setting="hideGuideFooter"></label>
+        </div>
+      </details>
 
-    <h2>During a session</h2>
-    <label class="toggle"><span>Fade off-topic videos</span><input type="checkbox" data-setting="blurOffTopic"></label>
-    <label class="toggle"><span>Pause before off-topic videos</span><input type="checkbox" data-setting="frictionScreen"></label>
-  </section>
+      <details class="group">
+        <summary>Top bar <span class="count"></span></summary>
+        <label class="row"><span>Menu button (☰)</span><input type="checkbox" class="switch" role="switch" data-setting="hideTopMenuButton"></label>
+        <label class="row"><span>YouTube logo</span><input type="checkbox" class="switch" role="switch" data-setting="hideTopLogo"></label>
+        <label class="row"><span>Voice search</span><input type="checkbox" class="switch" role="switch" data-setting="hideTopVoiceSearch"></label>
+        <label class="row"><span>Create button</span><input type="checkbox" class="switch" role="switch" data-setting="hideTopCreate"></label>
+        <label class="row"><span>Notifications bell</span><input type="checkbox" class="switch" role="switch" data-setting="hideTopNotifications"></label>
+      </details>
+    </section>
+  </main>
 
   <footer>
     <p>Runs entirely in your browser. Nothing you watch leaves this device.</p>

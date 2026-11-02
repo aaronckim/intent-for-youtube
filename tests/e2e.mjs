@@ -69,7 +69,7 @@ try {
 
   // ---- popup: start a session -------------------------------------------
   const popup = await context.newPage();
-  await popup.setViewportSize({ width: 320, height: 600 });
+  await popup.setViewportSize({ width: 340, height: 600 });
   await popup.goto(popupUrl);
   await popup.waitForSelector('#intent-input');
   await popup.screenshot({ path: `${outDir}/01-popup-idle.png`, fullPage: true });
@@ -180,6 +180,51 @@ try {
   await yt.waitForTimeout(500);
   check('toggling Shorts off applies live', !(await yt.evaluate(() => document.documentElement.classList.contains('intent-hide-shorts'))));
   await popup.check('[data-setting="hideShorts"]');
+
+  // ---- left menu and top bar, button by button ---------------------------
+  const displayOf = (selector) => yt.evaluate((s) => {
+    const el = document.querySelector(s);
+    return el ? getComputedStyle(el).display : 'missing';
+  }, selector);
+  const MENU_HOME = 'ytd-guide-entry-renderer:has(a[href="/"])';
+  const MENU_SUBS = 'ytd-guide-entry-renderer:has(a[href="/feed/subscriptions"])';
+  await popup.click('.group:has([data-setting="hideGuide"]) summary');
+  await popup.click('.group:has([data-setting="hideTopLogo"]) summary');
+  const menuBefore = [await displayOf(MENU_HOME), await displayOf(MENU_SUBS)];
+  await popup.check('[data-setting="hideGuideHome"]');
+  await popup.check('[data-setting="hideGuideSubscriptions"]');
+  await yt.waitForTimeout(500);
+  const menuAfter = [await displayOf(MENU_HOME), await displayOf(MENU_SUBS)];
+  check('left-menu buttons hide one by one', !menuBefore.includes('none') && menuAfter.every((d) => d === 'none'),
+    `before ${menuBefore}, after ${menuAfter}`);
+  await popup.check('[data-setting="hideTopMenuButton"]');
+  await popup.check('[data-setting="hideTopLogo"]');
+  await yt.waitForTimeout(500);
+  const topBar = [await displayOf('ytd-masthead #guide-button'), await displayOf('ytd-masthead ytd-topbar-logo-renderer')];
+  check('top-bar buttons hide one by one', topBar.every((d) => d === 'none'), `${topBar}`);
+  await popup.check('[data-setting="hideGuide"]');
+  await yt.waitForTimeout(500);
+  const wholeMenu = await yt.evaluate(() => ({
+    guide: getComputedStyle(document.querySelector('#guide')).display,
+    margin: getComputedStyle(document.querySelector('ytd-page-manager')).marginLeft,
+  }));
+  check('whole left menu hides and the page fills its space', wholeMenu.guide === 'none' && wholeMenu.margin === '0px',
+    `guide ${wholeMenu.guide}, margin ${wholeMenu.margin}`);
+  await yt.screenshot({ path: `${outDir}/07-menu-hidden.png` });
+
+  // ---- master switch ------------------------------------------------------
+  await popup.uncheck('[data-setting="enabled"]');
+  await yt.waitForTimeout(500);
+  const offClasses = await yt.evaluate(() => [...document.documentElement.classList].filter((c) => c.startsWith('intent-')));
+  check('master switch off leaves YouTube untouched', offClasses.length === 0 && (await displayOf('#guide')) !== 'none',
+    offClasses.join(' ') || 'no intent classes');
+  await popup.screenshot({ path: `${outDir}/08-popup-off.png`, fullPage: true });
+  await popup.check('[data-setting="enabled"]');
+  await yt.waitForTimeout(500);
+  check('master switch on restores every choice', (await displayOf('#guide')) === 'none' && (await displayOf(MENU_HOME)) === 'none');
+  for (const setting of ['hideGuide', 'hideGuideHome', 'hideGuideSubscriptions', 'hideTopMenuButton', 'hideTopLogo']) {
+    await popup.uncheck(`[data-setting="${setting}"]`);
+  }
 } catch (error) {
   check('run completed without errors', false, error.message.split('\n')[0]);
   await yt?.screenshot({ path: `${outDir}/failure.png` }).catch(() => {});

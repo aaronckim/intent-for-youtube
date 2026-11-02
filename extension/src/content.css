@@ -21,9 +21,7 @@ html.intent-hide-shorts ytd-rich-section-renderer:has(ytd-rich-shelf-renderer[is
 html.intent-hide-shorts grid-shelf-view-model:has(ytm-shorts-lockup-view-model),
 html.intent-hide-shorts ytm-shorts-lockup-view-model,
 html.intent-hide-shorts ytd-video-renderer:has(a[href^="/shorts/"]),
-html.intent-hide-shorts yt-lockup-view-model:has(a[href^="/shorts/"]),
-html.intent-hide-shorts ytd-guide-entry-renderer:has(a[title="Shorts"]),
-html.intent-hide-shorts ytd-mini-guide-entry-renderer[aria-label="Shorts"] {
+html.intent-hide-shorts yt-lockup-view-model:has(a[href^="/shorts/"]) {
   display: none !important;
 }
 
@@ -38,6 +36,42 @@ html.intent-hide-endscreen .html5-video-player .videowall-endscreen,
 html.intent-hide-endscreen .html5-video-player .ytp-ce-element,
 html.intent-hide-endscreen .html5-video-player .ytp-fullscreen-grid,
 html.intent-hide-endscreen .html5-video-player .ytp-autonav-endscreen-countdown-overlay {
+  display: none !important;
+}
+
+/* ---- Left menu ("guide"): all of it, or entry by entry ------------------- */
+/* The wide menu is #guide, the narrow icon strip is ytd-mini-guide-renderer. Entries are matched by
+   link, which doesn't change with the page language; the wide menu's Shorts entry has only a title. */
+html.intent-hide-guide tp-yt-app-drawer#guide,
+html.intent-hide-guide ytd-mini-guide-renderer,
+html.intent-hide-guide ytd-app #guide-button {
+  display: none !important;
+}
+html.intent-hide-guide ytd-app ytd-page-manager {
+  margin-left: 0 !important;
+}
+
+html.intent-hide-guide-home :is(ytd-guide-entry-renderer, ytd-mini-guide-entry-renderer):has(a[href="/"]),
+html.intent-hide-guide-shorts ytd-guide-entry-renderer:has(a[title="Shorts"]),
+html.intent-hide-guide-shorts ytd-mini-guide-entry-renderer:has(a[href^="/shorts"]),
+html.intent-hide-guide-subscriptions :is(ytd-guide-entry-renderer, ytd-mini-guide-entry-renderer):has(a[href="/feed/subscriptions"]),
+html.intent-hide-guide-you :is(ytd-guide-entry-renderer, ytd-mini-guide-entry-renderer):has(a[href="/feed/you"]),
+html.intent-hide-guide-history ytd-guide-entry-renderer:has(a[href="/feed/history"]),
+html.intent-hide-guide-explore ytd-guide-section-renderer:has(a[href="/channel/UC-9-kyTW8ZkZNDHQJ6FgpwQ"], a[href="/feed/storefront"]),
+html.intent-hide-guide-more ytd-guide-section-renderer:has(a[href="/premium"], a[href^="https://music.youtube.com"]),
+html.intent-hide-guide-settings ytd-guide-section-renderer:has(a[href="/reporthistory"], a[href="/account"]),
+html.intent-hide-guide-footer ytd-guide-renderer > #footer {
+  display: none !important;
+}
+
+/* ---- Top bar ("masthead"), button by button ------------------------------ */
+/* Create and Notifications only exist when signed in. Create is the button just before the bell. */
+html.intent-hide-top-menu ytd-app #guide-button,
+html.intent-hide-top-logo ytd-app ytd-topbar-logo-renderer,
+html.intent-hide-top-voice ytd-masthead #voice-search-button,
+html.intent-hide-top-create ytd-masthead #buttons ytd-button-renderer:has(+ ytd-notification-topbar-button-renderer),
+html.intent-hide-top-create ytd-masthead #buttons ytd-button-renderer:has(button[aria-label="Create"]),
+html.intent-hide-top-notifications ytd-masthead ytd-notification-topbar-button-renderer {
   display: none !important;
 }
 

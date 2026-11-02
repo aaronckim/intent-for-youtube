@@ -10,6 +10,21 @@
     hideShorts: 'intent-hide-shorts',
     hideSidebar: 'intent-hide-sidebar',
     hideEndScreen: 'intent-hide-endscreen',
+    hideGuide: 'intent-hide-guide',
+    hideGuideHome: 'intent-hide-guide-home',
+    hideGuideShorts: 'intent-hide-guide-shorts',
+    hideGuideSubscriptions: 'intent-hide-guide-subscriptions',
+    hideGuideYou: 'intent-hide-guide-you',
+    hideGuideHistory: 'intent-hide-guide-history',
+    hideGuideExplore: 'intent-hide-guide-explore',
+    hideGuideMoreFromYouTube: 'intent-hide-guide-more',
+    hideGuideSettings: 'intent-hide-guide-settings',
+    hideGuideFooter: 'intent-hide-guide-footer',
+    hideTopMenuButton: 'intent-hide-top-menu',
+    hideTopLogo: 'intent-hide-top-logo',
+    hideTopVoiceSearch: 'intent-hide-top-voice',
+    hideTopCreate: 'intent-hide-top-create',
+    hideTopNotifications: 'intent-hide-top-notifications',
   };
 
   // Innermost element of each kind of video card YouTube renders (search, grid, sidebar, Shorts).
@@ -29,9 +44,18 @@
 
   // ---- settings & session -------------------------------------------------
 
+  // With the master switch off, every feature reads as off and YouTube is left as it is.
+  function on(key) {
+    return Boolean(settings.enabled && settings[key]);
+  }
+
+  function focusing() {
+    return Boolean(settings.enabled && session);
+  }
+
   function applyClasses() {
-    for (const [key, cls] of Object.entries(TOGGLE_CLASSES)) root.classList.toggle(cls, Boolean(settings[key]));
-    root.classList.toggle('intent-session', Boolean(session));
+    for (const [key, cls] of Object.entries(TOGGLE_CLASSES)) root.classList.toggle(cls, on(key));
+    root.classList.toggle('intent-session', focusing());
   }
 
   function setSession(next) {
@@ -72,7 +96,7 @@
   // ---- off-topic cards ----------------------------------------------------
 
   function filteringCards() {
-    return Boolean(session && settings.blurOffTopic && keywords.length);
+    return Boolean(focusing() && settings.blurOffTopic && keywords.length);
   }
 
   function cardTitle(card) {
@@ -164,13 +188,13 @@
   // Shorts open as regular videos: no infinite swipe feed, and the friction screen still applies.
   function redirectShorts() {
     const match = location.pathname.match(/^\/shorts\/([\w-]+)/);
-    if (!match || !(settings.hideShorts || session)) return false;
+    if (!match || !(on('hideShorts') || focusing())) return false;
     location.replace(`/watch?v=${match[1]}`);
     return true;
   }
 
   function turnOffAutoplay() {
-    if (!settings.disableAutoplay || location.pathname !== '/watch') return;
+    if (!on('disableAutoplay') || location.pathname !== '/watch') return;
     let tries = 0;
     const timer = setInterval(() => {
       const on = document.querySelector('.ytp-autonav-toggle-button[aria-checked="true"]');
@@ -219,7 +243,7 @@
   async function checkWatchPage() {
     const videoId = currentVideoId();
     if (gate && gate.videoId !== videoId) closeGate();
-    if (!videoId || !session || !settings.frictionScreen || !keywords.length) {
+    if (!videoId || !focusing() || !settings.frictionScreen || !keywords.length) {
       closeGate();
       return;
     }
